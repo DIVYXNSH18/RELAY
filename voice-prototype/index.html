@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Relay Voice Prototype</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      background: #000;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    /* Ambient Glow */
+    .aurora {
+      position: absolute;
+      bottom: -30%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 150vw;
+      height: 60vh;
+      background: radial-gradient(ellipse at center, rgba(30, 144, 255, 0.4) 0%, transparent 70%);
+      filter: blur(80px);
+      z-index: 0;
+      opacity: 0.5;
+      transition: all 0.5s ease;
+    }
+
+    .aurora.active {
+      background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.7) 0%, transparent 70%);
+      opacity: 1;
+      bottom: -15%;
+      animation: pulseGlow 2s infinite alternate;
+    }
+
+    @keyframes pulseGlow {
+      0% { transform: translateX(-50%) scale(1); }
+      100% { transform: translateX(-50%) scale(1.05); }
+    }
+
+    /* Main UI */
+    .container {
+      z-index: 10;
+      text-align: center;
+      max-width: 600px;
+      width: 90%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .logo-ring {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 40px;
+      position: relative;
+      transition: all 0.4s ease;
+      cursor: pointer;
+    }
+
+    .logo-ring.active {
+      border-color: #38BDF8;
+      box-shadow: 0 0 30px rgba(56, 189, 248, 0.4);
+      animation: breathe 2s infinite ease-in-out;
+    }
+
+    @keyframes breathe {
+      0% { transform: scale(1); box-shadow: 0 0 20px rgba(56,189,248,0.3); }
+      50% { transform: scale(1.1); box-shadow: 0 0 40px rgba(56,189,248,0.6); }
+      100% { transform: scale(1); box-shadow: 0 0 20px rgba(56,189,248,0.3); }
+    }
+
+    .mic-icon {
+      font-size: 40px;
+      transition: transform 0.3s;
+    }
+
+    .status-text {
+      font-size: 1.2rem;
+      font-weight: 300;
+      color: #9CA3AF;
+      margin-bottom: 20px;
+      height: 30px;
+      transition: color 0.3s;
+    }
+    
+    .status-text.listening {
+      color: #38BDF8;
+      font-weight: 600;
+    }
+
+    .transcript-box {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 24px;
+      min-height: 120px;
+      backdrop-filter: blur(10px);
+      position: relative;
+      text-align: left;
+    }
+
+    .transcript-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #6B7280;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .transcript-text {
+      font-size: 1.25rem;
+      line-height: 1.5;
+      color: #F3F4F6;
+    }
+
+    .live-text {
+      color: #9CA3AF;
+      font-style: italic;
+    }
+
+    .command-history {
+      margin-top: 20px;
+      width: 100%;
+      text-align: left;
+    }
+    .command-history-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #4B5563;
+      margin-bottom: 10px;
+    }
+    .history-item {
+      background: rgba(56, 189, 248, 0.1);
+      border-left: 2px solid #38BDF8;
+      padding: 10px 15px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hint {
+      position: absolute;
+      bottom: 30px;
+      font-size: 0.8rem;
+      color: #6B7280;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="aurora" id="aurora"></div>
+
+  <div class="container">
+    <div class="logo-ring" id="micBtn" onclick="initAudio()">
+      <div class="mic-icon" id="micIcon">🎤</div>
+    </div>
+
+    <div class="status-text" id="statusText">Click microphone to start Wake Word engine</div>
+
+    <div class="transcript-box">
+      <span class="transcript-label">Live Transcription</span>
+      <div class="transcript-text" id="transcriptText">Waiting for audio...</div>
+    </div>
+
+    <div class="command-history" id="commandHistoryContainer" style="display: none;">
+      <div class="command-history-label">Captured Commands</div>
+      <div id="commandHistory"></div>
+    </div>
+  </div>
+
+  <div class="hint">Try saying "Hey Relay, run the tests" or "Hey Relay, deploy to production"</div>
+
+  <script>
+    const statusText = document.getElementById('statusText');
+    const transcriptText = document.getElementById('transcriptText');
+    const micBtn = document.getElementById('micBtn');
+    const micIcon = document.getElementById('micIcon');
+    const aurora = document.getElementById('aurora');
+    const historyContainer = document.getElementById('commandHistoryContainer');
+    const historyList = document.getElementById('commandHistory');
+
+    let recognition = null;
+    let isListeningForCommand = false;
+    let isRunning = false;
+    
+    // The exact regex we used in the React Native app for maximum forgiveness
+    const WAKE_WORD_REGEX = /(hey|hi|a|pay|hay|here|ok|okay)?\s*(relay|really|riley|delay|rene)/i;
+
+    function initAudio() {
+      if (isRunning) return;
+      
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("Your browser does not support the Web Speech API. Please use Chrome.");
+        return;
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        isRunning = true;
+        enterIdleMode();
+      };
+
+      recognition.onresult = (event) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+
+        const currentSpeech = (finalTranscript + ' ' + interimTranscript).trim().toLowerCase();
+
+        if (isListeningForCommand) {
+          // We are actively capturing the command
+          transcriptText.innerHTML = currentSpeech 
+            ? currentSpeech 
+            : '<span class="live-text">Listening for command...</span>';
+            
+          // If the user stopped speaking and we got a final result
+          if (finalTranscript) {
+            processCommand(finalTranscript.trim());
+          }
+        } else {
+          // We are passively listening for the wake word
+          transcriptText.innerHTML = '<span class="live-text">' + (currentSpeech || '...') + '</span>';
+          
+          if (WAKE_WORD_REGEX.test(currentSpeech)) {
+            triggerWakeWord();
+          }
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.error("Speech error", event.error);
+        if (event.error === 'not-allowed') {
+          statusText.innerText = "Microphone access denied.";
+          isRunning = false;
+        }
+      };
+
+      recognition.onend = () => {
+        // Automatically restart if it stops unexpectedly (continuous loop)
+        if (isRunning) {
+          try {
+            recognition.start();
+          } catch (e) {}
+        }
+      };
+
+      try {
+        recognition.start();
+      } catch (e) {}
+    }
+
+    function triggerWakeWord() {
+      if (isListeningForCommand) return;
+      
+      isListeningForCommand = true;
+      
+      // UI Updates for Active State
+      statusText.innerText = "Listening to your command...";
+      statusText.classList.add('listening');
+      micBtn.classList.add('active');
+      aurora.classList.add('active');
+      micIcon.innerText = "⚡";
+      transcriptText.innerHTML = '<span class="live-text">Speak now...</span>';
+      
+      // Play a tiny notification beep (using web audio api)
+      playBeep();
+
+      // We need to restart the recognition engine so it flushes the "Hey Relay" from the buffer
+      recognition.stop();
+      // onend will automatically restart it!
+    }
+
+    function processCommand(command) {
+      if (!command || !isListeningForCommand) return;
+      
+      // Add to history
+      historyContainer.style.display = 'block';
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      item.innerText = `Command: "${command}"`;
+      historyList.prepend(item);
+      
+      // Reset back to idle
+      enterIdleMode();
+    }
+
+    function enterIdleMode() {
+      isListeningForCommand = false;
+      statusText.innerText = "Say 'Hey Relay' to wake";
+      statusText.classList.remove('listening');
+      micBtn.classList.remove('active');
+      aurora.classList.remove('active');
+      micIcon.innerText = "🎤";
+      transcriptText.innerText = "Waiting for audio...";
+    }
+
+    function playBeep() {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.5, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.1);
+      } catch (e) {}
+    }
+  </script>
+</body>
+</html>

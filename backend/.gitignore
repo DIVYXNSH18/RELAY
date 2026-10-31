@@ -1,0 +1,14 @@
+# Binaries
+relay-backend
+relay-backend.exe
+*.exe
+
+# Test output
+*.test
+*.out
+
+# Environment secrets
+.env
+
+# Go build cache (not needed in repo)
+vendor/

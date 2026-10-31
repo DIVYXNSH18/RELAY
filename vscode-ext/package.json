@@ -1,0 +1,122 @@
+{
+  "name": "relay",
+  "displayName": "Relay — Team Context Sync",
+  "description": "Silently syncs AI assistant context between teammates based on their roles.",
+  "version": "0.1.0",
+  "publisher": "relay-team",
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["AI", "Other"],
+  "keywords": ["ai", "context", "copilot", "teamwork", "relay"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "relay-sidebar-view",
+          "title": "Relay",
+          "icon": "resources/relay-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "relay-sidebar-view": [
+        {
+          "type": "webview",
+          "id": "relay.sidebarView",
+          "name": "Team Activity Feed"
+        }
+      ]
+    },
+    "chatParticipants": [
+      {
+        "id": "relay.assistant",
+        "name": "relay",
+        "fullName": "Relay Context",
+        "description": "Ask about what your teammate just changed. Powered by Relay.",
+        "isSticky": true
+      }
+    ],
+    "configuration": {
+      "title": "Relay",
+      "properties": {
+        "relay.backendUrl": {
+          "type": "string",
+          "default": "http://localhost:8080",
+          "description": "URL of the Relay context engine backend."
+        },
+        "relay.username": {
+          "type": "string",
+          "default": "",
+          "description": "Your username. Must match the name set in the Expo app."
+        },
+        "relay.role": {
+          "type": "string",
+          "enum": ["Coder", "Debugger", "Deployer"],
+          "default": "Coder",
+          "description": "Your current role in the Relay session."
+        },
+        "relay.debounceMs": {
+          "type": "number",
+          "default": 2000,
+          "minimum": 500,
+          "maximum": 10000,
+          "description": "Milliseconds to wait after a file save before sending the diff."
+        },
+        "relay.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable Relay diff capture."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "relay.focusSidebar",
+        "title": "Relay: Open Activity Feed Sidebar",
+        "category": "Relay"
+      },
+      {
+        "command": "relay.setup",
+        "title": "Relay: Open Settings & Onboarding UI",
+        "category": "Relay"
+      },
+      {
+        "command": "relay.setUsername",
+        "title": "Relay: Set My Username",
+        "category": "Relay"
+      },
+      {
+        "command": "relay.setRole",
+        "title": "Relay: Set My Role",
+        "category": "Relay"
+      },
+      {
+        "command": "relay.toggleEnabled",
+        "title": "Relay: Toggle Capture",
+        "category": "Relay"
+      },
+      {
+        "command": "relay.showStatus",
+        "title": "Relay: Show Status",
+        "category": "Relay"
+      },
+      {
+        "command": "relay.showSessionPin",
+        "title": "Relay: Show Pairing QR & Code",
+        "category": "Relay"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile",
+    "package": "vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.4.0"
+  }
+}

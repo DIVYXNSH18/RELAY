@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "Relay",
+    "slug": "relay-app",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#080B14"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.relayteam.relay",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Relay needs microphone access for voice commands.",
+        "NSSpeechRecognitionUsageDescription": "Relay needs speech recognition to detect the wake word.",
+        "NSCameraUsageDescription": "Relay needs camera access to capture error screens."
+      }
+    },
+    "android": {
+      "package": "com.relayteam.relay",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-camera",
+      "expo-status-bar",
+      "expo-audio",
+      "expo-dev-client",
+      "expo-speech-recognition"
+    ],
+    "scheme": "relay",
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ae020a7d-d7ae-4733-a164-108ca2eea5ef"
+      }
+    }
+  }
+}
